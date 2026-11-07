@@ -1,0 +1,86 @@
+/* ==========================================================
+   FF PANEL v3 · ProxyPin
+   Configuración en JSON (PANEL_JSON). Si la rompes, el script
+   arranca con valores base y lo avisa en el log.
+   ========================================================== */
+
+/* ---------------- 1. PANEL (JSON) ---------------- */
+const PANEL_JSON = `{
+  "modo": "log",
+  "lobby": {
+    "diamantes":  { "on": true,  "valor": 999999 },
+    "oro":        { "on": false, "valor": 99999999 },
+    "nivel":      { "on": false, "valor": 80 },
+    "rango":      { "on": false, "valor": 6 },
+    "insignia":   { "on": false, "valor": 1001 },
+    "paseElite":  { "on": false },
+    "nickname":   { "on": false, "valor": "Venice" },
+    "prendas":    { "on": false, "ids": [] },
+    "personajes": { "on": false, "ids": [] },
+    "mascota":    { "on": false, "id": 0, "nivel": 5 }
+  },
+  "juego": {
+    "forzar": { "on": false, "mapa": {} },
+    "lagSwitch": 0,
+    "region": { "on": false, "desde": "ggblueshark.com", "hacia": "us.freefiremobile.com" }
+  }
+}`;
+
+/* Opcional: si pones una URL, el panel se descarga de ahí y
+   PANEL_JSON queda solo como respaldo. Deja "" para usar el local. */
+const PANEL_URL = "";
+
+/* ---------------- 2. BASE Y FUSIÓN ---------------- */
+const BASE = {
+  modo: "log",
+  lobby: {
+    diamantes:  { on: false, valor: 0 },
+    oro:        { on: false, valor: 0 },
+    nivel:      { on: false, valor: 0 },
+    rango:      { on: false, valor: 0 },
+    insignia:   { on: false, valor: 0 },
+    paseElite:  { on: false },
+    nickname:   { on: false, valor: "" },
+    prendas:    { on: false, ids: [] },
+    personajes: { on: false, ids: [] },
+    mascota:    { on: false, id: 0, nivel: 0 }
+  },
+  juego: {
+    forzar: { on: false, mapa: {} },
+    lagSwitch: 0,
+    region: { on: false, desde: "", hacia: "" }
+  }
+};
+
+function clonar(o) { return JSON.parse(JSON.stringify(o)); }
+
+function fusionar(base, extra) {
+  if (!extra || typeof extra !== "object") return base;
+  for (const k in extra) {
+    const v = extra[k];
+    if (v && typeof v === "object" && !Array.isArray(v) && base[k] && typeof base[k] === "object") {
+      fusionar(base[k], v);
+    } else {
+      base[k] = v;
+    }
+  }
+  return base;
+}
+
+let CFG = clonar(BASE);
+try {
+  if (PANEL_JSON.trim()) fusionar(CFG, JSON.parse(PANEL_JSON));
+} catch (e) {
+  console.log("[ff-panel] JSON inválido, uso valores base: " + e);
+}
+
+let panelCargado = !PANEL_URL;
+async function cargarPanel() {
+  if (panelCargado) return;
+  panelCargado = true;
+  try {
+    const r = await fetch(PANEL_URL);
+    const obj = JSON.parse(await r.text());
+    CFG = fusionar(clonar(BASE), obj);
+    console.log("[ff-panel] panel remoto cargado");
+  } catch (e)
